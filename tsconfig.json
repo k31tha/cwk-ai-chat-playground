@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    /* Language and Environment */
+    "target": "ES2020",
+    "lib": ["ES2020"],
+    "module": "nodenext",
+
+    /* Modules */
+    "moduleResolution": "nodenext",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+
+    /* Emit */
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "sourceMap": true,
+
+    /* Type Checking */
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
