@@ -164,19 +164,10 @@ const chat = async (messages: Anthropic.MessageParam[]) => {
     max_tokens: 4000,
     messages,
     tools,
-    // On Claude 5 models `display` defaults to "omitted" (empty thinking text),
-    // so opt in to summaries to be able to show the reasoning.
-    thinking: { type: "adaptive", display: "summarized" },
+    thinking: { type: "adaptive" },
     system: basicTravelSystemPrompt,
   });
 };
-
-// Summarized reasoning lives in `thinking` blocks. Empty blocks are normal (the
-// model may skip thinking, or progress-update blocks may carry no text), so skip them.
-const getThinking = (message: Anthropic.Message) =>
-  message.content
-    .flatMap((b) => (b.type === "thinking" && b.thinking ? [b.thinking] : []))
-    .join("\n\n");
 
 /**
  * Sends the conversation and keeps going while the model asks for tools: each
@@ -187,9 +178,6 @@ const runTurn = async (messages: Anthropic.MessageParam[]) => {
   while (true) {
     const response = await chat(messages);
     add_assistant_message(messages, response);
-
-    const thinking = getThinking(response);
-    if (thinking) console.log(`\n[thinking] ${thinking}\n`);
 
     if (response.stop_reason !== "tool_use") {
       return response;

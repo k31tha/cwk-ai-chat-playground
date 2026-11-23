@@ -154,18 +154,7 @@ const chat = (input: ResponseInput): Promise<Response> =>
     conversation: conversation.id,
     input,
     tools,
-    // Raw reasoning is never exposed; ask for a summary of it instead
-    reasoning: { summary: "auto" },
   });
-
-// Summaries come back as `reasoning` items, each with a `summary` array of text parts
-const getReasoningSummary = (response: Response): string =>
-  response.output
-    .flatMap((item) =>
-      item.type === "reasoning" ? item.summary.map((s) => s.text) : [],
-    )
-    .filter(Boolean)
-    .join("\n\n");
 
 /**
  * Sends new input and keeps going while the model asks for tools: each tool
@@ -175,9 +164,6 @@ const getReasoningSummary = (response: Response): string =>
 const runTurn = async (input: ResponseInput): Promise<Response> => {
   while (true) {
     const response = await chat(input);
-
-    const summary = getReasoningSummary(response);
-    if (summary) console.log(`\n[reasoning summary] ${summary}\n`);
 
     const calls = response.output.filter(
       (item): item is ResponseFunctionToolCall => item.type === "function_call",
