@@ -52,6 +52,10 @@ pnpm tsx src/anthropic/basic-chat-with-tools.ts
 pnpm tsx src/openai/basic-chat.ts
 pnpm tsx src/openai/basic-chat-with-tools.ts
 pnpm tsx src/openai/basic-chat-with-tools-conversation.ts
+
+# Variants that also print the model's reasoning summary
+pnpm tsx src/anthropic/basic-chat-with-tools-reasoning.ts
+pnpm tsx src/openai/basic-chat-with-tools-conversation-reasoning.ts
 ```
 
 Press return on an empty line to exit. Model names are set in each folder's `config.ts`.
