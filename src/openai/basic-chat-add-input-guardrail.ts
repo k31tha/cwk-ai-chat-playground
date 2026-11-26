@@ -13,19 +13,16 @@ import type {
   ResponseFunctionToolCall,
   ResponseInput,
 } from "openai/resources/responses/responses";
-import {
-  basicTravelSystemPrompt,
-  inputGuardrailSystemPrompt,
-} from "../common/prompt-ref.js";
+import { basicTravelSystemPrompt } from "../common/prompt-ref.js";
 import {
   addTimePeriod,
   askHolidayPrompt,
-  buildGuardrailInput,
   getWeather,
   type TimePeriod,
   type Turn,
 } from "../common/utils.js";
-import { guardrailModel, model } from "./config.js";
+import { model } from "./config.js";
+import { runInputGuardrail } from "./input-guardrail.js";
 
 // Load environment variables
 dotenv.config();
@@ -152,57 +149,24 @@ const runTools = async (
 // Input guardrail
 // ---------------------------------------------------------------------------
 
-type Verdict = { allowed: boolean; reason: string };
-
 // Text-only record of the chat (user and assistant messages) for the guardrail.
 // The conversation itself lives on OpenAI's side, so we keep our own short copy.
 const transcript: Turn[] = [];
 
-// This call is deliberately NOT part of the stored conversation (no
-// `conversation` id, store: false), so checked input leaves no trace there.
-// `turns` is the conversation so far, so short follow-ups are judged in context
-const checkInput = async (text: string, turns: Turn[]): Promise<Verdict> => {
-  try {
-    const response = await client.responses.create({
-      model: guardrailModel,
-      instructions: inputGuardrailSystemPrompt,
-      // Conversation and new message are wrapped in tags so they are treated as data
-      input: buildGuardrailInput(turns, text),
-      store: false,
-      // Structured output makes the cheap model return a parseable verdict
-      text: {
-        format: {
-          type: "json_schema",
-          name: "verdict",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: {
-              label: { type: "string", enum: ["ON_TOPIC", "OFF_TOPIC"] },
-              reason: { type: "string", description: "One short sentence." },
-            },
-            required: ["label", "reason"],
-            additionalProperties: false,
-          },
-        },
-      },
-    });
-    const { label, reason } = JSON.parse(response.output_text) as {
-      label: "ON_TOPIC" | "OFF_TOPIC";
-      reason: string;
-    };
-    return { allowed: label === "ON_TOPIC", reason };
-  } catch (err) {
-    // Fail closed: if the guardrail itself breaks, don't let the input through
-    return { allowed: false, reason: `guardrail error: ${String(err)}` };
-  }
-};
+// The guardrail call itself lives in input-guardrail.ts so the evaluation
+// script can reuse it.
 
 /** Runs the guardrail, telling the user why if the input is blocked. */
 const passesGuardrail = async (text: string): Promise<boolean> => {
-  const verdict = await checkInput(text, transcript);
-  if (!verdict.allowed) console.warn(`\n[blocked] ${verdict.reason}\n`);
-  return verdict.allowed;
+  try {
+    const { label, reason } = await runInputGuardrail(text, transcript);
+    if (label === "ON_TOPIC") return true;
+    console.warn(`\n[blocked] ${reason}\n`);
+  } catch (err) {
+    // Fail closed: if the guardrail itself breaks, don't let the input through
+    console.warn(`\n[blocked] guardrail error: ${String(err)}\n`);
+  }
+  return false;
 };
 
 // ---------------------------------------------------------------------------

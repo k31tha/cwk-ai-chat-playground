@@ -5,3 +5,6 @@ dist/
 # Local-only notes (not published)
 docs/
 plan/
+
+# Guardrail evaluation output (generated)
+data/results/
