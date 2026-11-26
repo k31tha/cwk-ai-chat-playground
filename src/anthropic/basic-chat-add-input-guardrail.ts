@@ -1,9 +1,11 @@
 // Variant of basic-chat-with-tools-reasoning.ts that adds an INPUT GUARDRAIL.
 // Every user message (the holiday prompt and each follow-up) is first checked by
-// a cheap, fast model (guardrailModel in config.ts). Only allowed messages reach
-// the main model; blocked ones are rejected with a reason and never enter the
-// conversation history. Kept as a separate file so the other examples stay unchanged.
+// a cheap, fast model (guardrailModel in config.ts) that returns a structured
+// verdict. Only allowed messages reach the main model; blocked ones are rejected
+// with a reason and never enter the conversation history. Kept as a separate
+// file so the other examples stay unchanged.
 import Anthropic from "@anthropic-ai/sdk";
+import { jsonSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/json-schema";
 import dotenv from "dotenv";
 import { createInterface } from "node:readline/promises";
 import {
@@ -166,36 +168,37 @@ const runTools = async (
 // Input guardrail
 // ---------------------------------------------------------------------------
 
-// Forcing a tool call makes the cheap model return a structured verdict.
-const verdictTool: Anthropic.Tool = {
-  name: "report_verdict",
-  description: "Report whether the user input may be passed to the assistant.",
-  input_schema: {
-    type: "object",
-    properties: {
-      allowed: { type: "boolean" },
-      reason: { type: "string", description: "One short sentence." },
-    },
-    required: ["allowed", "reason"],
+// Structured outputs (output_config.format) constrain the cheap model's reply to
+// this JSON schema, the same approach as the OpenAI version of this example.
+const verdictFormat = jsonSchemaOutputFormat({
+  type: "object",
+  properties: {
+    allowed: { type: "boolean" },
+    reason: { type: "string", description: "One short sentence." },
   },
-};
+  required: ["allowed", "reason"],
+  additionalProperties: false,
+} as const);
 
 type Verdict = { allowed: boolean; reason: string };
 
 const checkInput = async (text: string): Promise<Verdict> => {
   try {
-    const response = await client.messages.create({
+    const response = await client.messages.parse({
       model: guardrailModel,
       max_tokens: 200,
       system: inputGuardrailSystemPrompt,
       // The user text is wrapped in tags so the guardrail treats it as data
-      messages: [{ role: "user", content: `<user_input>\n${text}\n</user_input>` }],
-      tools: [verdictTool],
-      tool_choice: { type: "tool", name: verdictTool.name },
+      messages: [{ role: "user", content: `<user_input>
+${text}
+</user_input>` }],
+      output_config: { format: verdictFormat },
     });
-    const block = response.content.find((b) => b.type === "tool_use");
-    if (block?.type !== "tool_use") throw new Error("no verdict returned");
-    return block.input as Verdict;
+    // null if the reply was cut off or refused, so it fails closed below
+    if (!response.parsed_output) {
+      throw new Error(`no verdict returned (${response.stop_reason})`);
+    }
+    return response.parsed_output;
   } catch (err) {
     // Fail closed: if the guardrail itself breaks, don't let the input through
     return { allowed: false, reason: `guardrail error: ${String(err)}` };
