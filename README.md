@@ -56,6 +56,22 @@ pnpm tsx src/openai/basic-chat-with-tools-conversation.ts
 # Variants that also print the model's reasoning summary
 pnpm tsx src/anthropic/basic-chat-with-tools-reasoning.ts
 pnpm tsx src/openai/basic-chat-with-tools-conversation-reasoning.ts
+
+# Variants that check every user message with a cheap model first (input guardrail)
+pnpm tsx src/anthropic/basic-chat-add-input-guardrail.ts
+pnpm tsx src/openai/basic-chat-add-input-guardrail.ts
 ```
+
+## Evaluating the input guardrail
+
+```bash
+# Generate N sample prompts with the label the guardrail should give (default 24, mixed categories)
+pnpm guardrail:generate -- --count 30 --out my-cases
+
+# Run a cases file through the guardrail. A bare name is read from data/; -s a = Anthropic, -s o = OpenAI, no flag = both
+pnpm guardrail:eval -- my-cases -s a
+```
+
+Each result is logged as a JSON line (`sdk`, `model`, `prompt`, `expected`, `actual`, `pass`) and the full results are saved in `data/results/` (git-ignored). `data/guardrail-cases.json` is a committed sample.
 
 Press return on an empty line to exit. Model names are set in each folder's `config.ts`.

@@ -143,3 +143,30 @@ export const askHolidayPrompt = async (rl: Interface): Promise<string> => {
     if (custom) return custom;
   }
 };
+
+// A plain-text record of the chat, used to give the input guardrail context
+export type Turn = { role: "user" | "assistant"; text: string };
+
+const GUARDRAIL_MAX_TURNS = 6;
+const GUARDRAIL_MAX_CHARS = 500;
+
+/**
+ * Builds the guardrail's input: the most recent turns (each shortened, to keep
+ * the cheap model's input small) followed by the new message to classify.
+ */
+export const buildGuardrailInput = (turns: Turn[], latest: string): string => {
+  const recent = turns
+    .slice(-GUARDRAIL_MAX_TURNS)
+    .map((t) => {
+      const text =
+        t.text.length > GUARDRAIL_MAX_CHARS
+          ? `${t.text.slice(0, GUARDRAIL_MAX_CHARS)}...`
+          : t.text;
+      return `${t.role === "user" ? "User" : "Assistant"}: ${text}`;
+    })
+    .join("\n");
+  return (
+    `<conversation>\n${recent || "(none yet)"}\n</conversation>\n` +
+    `<user_input>\n${latest}\n</user_input>`
+  );
+};
