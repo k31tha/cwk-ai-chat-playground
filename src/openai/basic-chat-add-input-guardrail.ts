@@ -20,8 +20,10 @@ import {
 import {
   addTimePeriod,
   askHolidayPrompt,
+  buildGuardrailInput,
   getWeather,
   type TimePeriod,
+  type Turn,
 } from "../common/utils.js";
 import { guardrailModel, model } from "./config.js";
 
@@ -152,15 +154,20 @@ const runTools = async (
 
 type Verdict = { allowed: boolean; reason: string };
 
+// Text-only record of the chat (user and assistant messages) for the guardrail.
+// The conversation itself lives on OpenAI's side, so we keep our own short copy.
+const transcript: Turn[] = [];
+
 // This call is deliberately NOT part of the stored conversation (no
 // `conversation` id, store: false), so checked input leaves no trace there.
-const checkInput = async (text: string): Promise<Verdict> => {
+// `turns` is the conversation so far, so short follow-ups are judged in context
+const checkInput = async (text: string, turns: Turn[]): Promise<Verdict> => {
   try {
     const response = await client.responses.create({
       model: guardrailModel,
       instructions: inputGuardrailSystemPrompt,
-      // The user text is wrapped in tags so the guardrail treats it as data
-      input: `<user_input>\n${text}\n</user_input>`,
+      // Conversation and new message are wrapped in tags so they are treated as data
+      input: buildGuardrailInput(turns, text),
       store: false,
       // Structured output makes the cheap model return a parseable verdict
       text: {
@@ -171,16 +178,20 @@ const checkInput = async (text: string): Promise<Verdict> => {
           schema: {
             type: "object",
             properties: {
-              allowed: { type: "boolean" },
+              label: { type: "string", enum: ["ON_TOPIC", "OFF_TOPIC"] },
               reason: { type: "string", description: "One short sentence." },
             },
-            required: ["allowed", "reason"],
+            required: ["label", "reason"],
             additionalProperties: false,
           },
         },
       },
     });
-    return JSON.parse(response.output_text) as Verdict;
+    const { label, reason } = JSON.parse(response.output_text) as {
+      label: "ON_TOPIC" | "OFF_TOPIC";
+      reason: string;
+    };
+    return { allowed: label === "ON_TOPIC", reason };
   } catch (err) {
     // Fail closed: if the guardrail itself breaks, don't let the input through
     return { allowed: false, reason: `guardrail error: ${String(err)}` };
@@ -189,7 +200,7 @@ const checkInput = async (text: string): Promise<Verdict> => {
 
 /** Runs the guardrail, telling the user why if the input is blocked. */
 const passesGuardrail = async (text: string): Promise<boolean> => {
-  const verdict = await checkInput(text);
+  const verdict = await checkInput(text, transcript);
   if (!verdict.allowed) console.warn(`\n[blocked] ${verdict.reason}\n`);
   return verdict.allowed;
 };
@@ -253,11 +264,13 @@ try {
     first = await askHolidayPrompt(rl);
     if (await passesGuardrail(first)) break;
   }
+  transcript.push({ role: "user", text: first });
   let input: ResponseInput = [{ role: "user", content: first }];
 
   while (true) {
     const response = await runTurn(input);
     console.log(`\n${response.output_text}\n`);
+    transcript.push({ role: "assistant", text: response.output_text });
 
     if (response.status !== "completed") {
       const reason = response.incomplete_details?.reason ?? "unknown";
@@ -272,6 +285,7 @@ try {
       if (!followUp || (await passesGuardrail(followUp))) break;
     }
     if (!followUp) break;
+    transcript.push({ role: "user", text: followUp });
     input = [{ role: "user", content: followUp }];
   }
 } finally {

@@ -12,8 +12,10 @@ import { z } from "zod";
 import {
   addTimePeriod,
   askHolidayPrompt,
+  buildGuardrailInput,
   getWeather,
   type TimePeriod,
+  type Turn,
 } from "../common/utils.js";
 import {
   basicTravelSystemPrompt,
@@ -169,32 +171,35 @@ const runTools = async (
 // Input guardrail
 // ---------------------------------------------------------------------------
 
+// Text-only record of the chat (user and assistant messages) for the guardrail
+const transcript: Turn[] = [];
+
 // Structured outputs (output_config.format) constrain the cheap model's reply to
 // this schema. It is written in Zod here, and parse() returns it typed.
 const VerdictSchema = z.object({
-  allowed: z.boolean(),
+  label: z.enum(["ON_TOPIC", "OFF_TOPIC"]),
   reason: z.string().describe("One short sentence."),
 });
 
-type Verdict = z.infer<typeof VerdictSchema>;
+type Verdict = { allowed: boolean; reason: string };
 
-const checkInput = async (text: string): Promise<Verdict> => {
+// `turns` is the conversation so far, so short follow-ups are judged in context
+const checkInput = async (text: string, turns: Turn[]): Promise<Verdict> => {
   try {
     const response = await client.messages.parse({
       model: guardrailModel,
       max_tokens: 200,
       system: inputGuardrailSystemPrompt,
-      // The user text is wrapped in tags so the guardrail treats it as data
-      messages: [{ role: "user", content: `<user_input>
-${text}
-</user_input>` }],
+      // Conversation and new message are wrapped in tags so they are treated as data
+      messages: [{ role: "user", content: buildGuardrailInput(turns, text) }],
       output_config: { format: zodOutputFormat(VerdictSchema) },
     });
     // null if the reply was cut off or refused, so it fails closed below
     if (!response.parsed_output) {
       throw new Error(`no verdict returned (${response.stop_reason})`);
     }
-    return response.parsed_output;
+    const { label, reason } = response.parsed_output;
+    return { allowed: label === "ON_TOPIC", reason };
   } catch (err) {
     // Fail closed: if the guardrail itself breaks, don't let the input through
     return { allowed: false, reason: `guardrail error: ${String(err)}` };
@@ -203,7 +208,7 @@ ${text}
 
 /** Runs the guardrail, telling the user why if the input is blocked. */
 const passesGuardrail = async (text: string): Promise<boolean> => {
-  const verdict = await checkInput(text);
+  const verdict = await checkInput(text, transcript);
   if (!verdict.allowed) console.warn(`\n[blocked] ${verdict.reason}\n`);
   return verdict.allowed;
 };
@@ -283,6 +288,7 @@ try {
     const first = await askHolidayPrompt(rl);
     if (await passesGuardrail(first)) {
       add_user_message(messages, first);
+      transcript.push({ role: "user", text: first });
       break;
     }
   }
@@ -290,6 +296,7 @@ try {
   while (true) {
     const response = await runTurn(messages);
     console.log(`\n${getText(response)}\n`);
+    transcript.push({ role: "assistant", text: getText(response) });
 
     const { stop_reason } = response;
     if (stop_reason !== "end_turn") {
@@ -306,6 +313,7 @@ try {
     }
     if (!followUp) break;
     add_user_message(messages, followUp);
+    transcript.push({ role: "user", text: followUp });
   }
 } finally {
   rl.close();
