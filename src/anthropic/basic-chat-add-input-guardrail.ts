@@ -5,9 +5,10 @@
 // with a reason and never enter the conversation history. Kept as a separate
 // file so the other examples stay unchanged.
 import Anthropic from "@anthropic-ai/sdk";
-import { jsonSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/json-schema";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import dotenv from "dotenv";
 import { createInterface } from "node:readline/promises";
+import { z } from "zod";
 import {
   addTimePeriod,
   askHolidayPrompt,
@@ -169,18 +170,13 @@ const runTools = async (
 // ---------------------------------------------------------------------------
 
 // Structured outputs (output_config.format) constrain the cheap model's reply to
-// this JSON schema, the same approach as the OpenAI version of this example.
-const verdictFormat = jsonSchemaOutputFormat({
-  type: "object",
-  properties: {
-    allowed: { type: "boolean" },
-    reason: { type: "string", description: "One short sentence." },
-  },
-  required: ["allowed", "reason"],
-  additionalProperties: false,
-} as const);
+// this schema. It is written in Zod here, and parse() returns it typed.
+const VerdictSchema = z.object({
+  allowed: z.boolean(),
+  reason: z.string().describe("One short sentence."),
+});
 
-type Verdict = { allowed: boolean; reason: string };
+type Verdict = z.infer<typeof VerdictSchema>;
 
 const checkInput = async (text: string): Promise<Verdict> => {
   try {
@@ -192,7 +188,7 @@ const checkInput = async (text: string): Promise<Verdict> => {
       messages: [{ role: "user", content: `<user_input>
 ${text}
 </user_input>` }],
-      output_config: { format: verdictFormat },
+      output_config: { format: zodOutputFormat(VerdictSchema) },
     });
     // null if the reply was cut off or refused, so it fails closed below
     if (!response.parsed_output) {
