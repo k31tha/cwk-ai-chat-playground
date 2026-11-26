@@ -56,6 +56,10 @@ pnpm tsx src/openai/basic-chat-with-tools-conversation.ts
 # Variants that also print the model's reasoning summary
 pnpm tsx src/anthropic/basic-chat-with-tools-reasoning.ts
 pnpm tsx src/openai/basic-chat-with-tools-conversation-reasoning.ts
+
+# Variants that check every user message with a cheap model first (input guardrail)
+pnpm tsx src/anthropic/basic-chat-add-input-guardrail.ts
+pnpm tsx src/openai/basic-chat-add-input-guardrail.ts
 ```
 
 Press return on an empty line to exit. Model names are set in each folder's `config.ts`.
