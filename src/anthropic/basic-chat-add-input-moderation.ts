@@ -7,6 +7,16 @@
 // messages through; the guardrail adds the topic check. Compare with
 // basic-chat-add-input-guardrail.ts (guardrail only).
 // This file needs OPENAI_API_KEY for moderation as well as ANTHROPIC_API_KEY.
+//
+// WHAT CHANGED compared with basic-chat-add-input-guardrail.ts (about 30 lines):
+//   1. One new import: `runInputModeration` from ../openai/input-moderation.ts.
+//      That is an OpenAI call, which is why this file needs OPENAI_API_KEY.
+//   2. `passesGuardrail()` is renamed `passesChecks()` and runs moderation first,
+//      then the topic guardrail. The message is blocked if either one blocks it,
+//      or if either call fails.
+//   3. The places that called `passesGuardrail()` now call `passesChecks()`.
+// Everything else is the same as the guardrail example. To see the exact lines:
+//   diff src/anthropic/basic-chat-add-input-guardrail.ts src/anthropic/basic-chat-add-input-moderation.ts
 import Anthropic from "@anthropic-ai/sdk";
 import dotenv from "dotenv";
 import { createInterface } from "node:readline/promises";
@@ -182,22 +192,16 @@ const passesChecks = async (text: string): Promise<boolean> => {
     // Step 1: moderation (harmful content)
     const moderation = await runInputModeration(text);
     if (moderation.flagged) {
-      console.warn(`
-[blocked] ${moderation.reason}
-`);
+      console.warn(`\n[blocked] ${moderation.reason}\n`);
       return false;
     }
     // Step 2: topic guardrail
     const { label, reason } = await runInputGuardrail(text, transcript);
     if (label === "ON_TOPIC") return true;
-    console.warn(`
-[blocked] ${reason}
-`);
+    console.warn(`\n[blocked] ${reason}\n`);
   } catch (err) {
     // Fail closed: if a check itself breaks, don't let the input through
-    console.warn(`
-[blocked] input check error: ${String(err)}
-`);
+    console.warn(`\n[blocked] input check error: ${String(err)}\n`);
   }
   return false;
 };

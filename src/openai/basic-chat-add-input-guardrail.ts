@@ -4,6 +4,23 @@
 // messages reach the main model; blocked ones are rejected with a reason and are
 // never added to the stored conversation. Kept as a separate file so the other
 // examples stay unchanged.
+//
+// WHAT CHANGED compared with basic-chat-with-tools-conversation-reasoning.ts
+// (about 45 lines):
+//   1. Two new imports: `Turn`, and `runInputGuardrail` from ./input-guardrail.ts,
+//      which holds the guardrail call itself.
+//   2. A new "Input guardrail" section with `transcript` and `passesGuardrail()`.
+//      The conversation is stored on OpenAI's side, so the guardrail cannot read
+//      it; `transcript` is our own short text copy for it to look at.
+//      `passesGuardrail()` blocks the message if it is off topic or if the
+//      guardrail call fails.
+//   3. In the chat loop at the bottom, the first message and every follow-up are
+//      only sent once `passesGuardrail()` says yes (otherwise the user is asked
+//      again), so blocked input never reaches the stored conversation. Each user
+//      and assistant turn is also pushed to `transcript`.
+// The tools, the tool loop and the reasoning output are unchanged. To see the
+// exact lines:
+//   diff src/openai/basic-chat-with-tools-conversation-reasoning.ts src/openai/basic-chat-add-input-guardrail.ts
 import dotenv from "dotenv";
 import { createInterface } from "node:readline/promises";
 import OpenAI from "openai";
