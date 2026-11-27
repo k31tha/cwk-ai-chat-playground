@@ -1,10 +1,12 @@
 // Variant of basic-chat-with-tools-reasoning.ts that checks every user message
-// (the holiday prompt and each follow-up) with OpenAI's MODERATION API before it
-// reaches the main model. Flagged messages are rejected with the flagged
-// categories and never enter the conversation history. Same shape as
-// basic-chat-add-input-guardrail.ts so the two can be compared. Moderation
-// checks for harmful content, not topic, so off-topic but harmless messages pass.
-// This file needs OPENAI_API_KEY for the moderation call as well as ANTHROPIC_API_KEY.
+// (the holiday prompt and each follow-up) in TWO steps before it reaches the main
+// model: 1) OpenAI's MODERATION API (harmful content), then 2) the topic INPUT
+// GUARDRAIL from input-guardrail.ts (on or off topic, given the conversation so
+// far). A message must pass both. Rejected messages print the reason and never
+// enter the conversation history. Moderation alone lets off-topic harmless
+// messages through; the guardrail adds the topic check. Compare with
+// basic-chat-add-input-guardrail.ts (guardrail only).
+// This file needs OPENAI_API_KEY for moderation as well as ANTHROPIC_API_KEY.
 import Anthropic from "@anthropic-ai/sdk";
 import dotenv from "dotenv";
 import { createInterface } from "node:readline/promises";
@@ -13,10 +15,12 @@ import {
   askHolidayPrompt,
   getWeather,
   type TimePeriod,
+  type Turn,
 } from "../common/utils.js";
 import { basicTravelSystemPrompt } from "../common/prompt-ref.js";
 import { model } from "./config.js";
 import { runInputModeration } from "../openai/input-moderation.js";
+import { runInputGuardrail } from "./input-guardrail.js";
 
 // Load environment variables
 dotenv.config();
@@ -163,25 +167,36 @@ const runTools = async (
 };
 
 // ---------------------------------------------------------------------------
-// Input moderation
+// Input checks (moderation, then guardrail)
 // ---------------------------------------------------------------------------
 
-// Moderation looks at one message at a time, so unlike the guardrail it needs
-// no record of the conversation. The call lives in ../openai/input-moderation.ts
-// so the evaluation script can reuse it.
+// Text-only record of the chat (user and assistant messages) for the guardrail,
+// which judges short follow-ups in context. Moderation ignores it.
+const transcript: Turn[] = [];
 
-/** Runs moderation, telling the user why if the input is blocked. */
-const passesModeration = async (text: string): Promise<boolean> => {
+// Both checks live in their own files so the evaluation scripts can reuse them.
+
+/** Runs both checks, telling the user why if the input is blocked. */
+const passesChecks = async (text: string): Promise<boolean> => {
   try {
-    const { flagged, reason } = await runInputModeration(text);
-    if (!flagged) return true;
+    // Step 1: moderation (harmful content)
+    const moderation = await runInputModeration(text);
+    if (moderation.flagged) {
+      console.warn(`
+[blocked] ${moderation.reason}
+`);
+      return false;
+    }
+    // Step 2: topic guardrail
+    const { label, reason } = await runInputGuardrail(text, transcript);
+    if (label === "ON_TOPIC") return true;
     console.warn(`
 [blocked] ${reason}
 `);
   } catch (err) {
-    // Fail closed: if moderation itself breaks, don't let the input through
+    // Fail closed: if a check itself breaks, don't let the input through
     console.warn(`
-[blocked] moderation error: ${String(err)}
+[blocked] input check error: ${String(err)}
 `);
   }
   return false;
@@ -260,8 +275,9 @@ const rl = createInterface({ input: process.stdin, output: process.stdout });
 try {
   while (true) {
     const first = await askHolidayPrompt(rl);
-    if (await passesModeration(first)) {
+    if (await passesChecks(first)) {
       add_user_message(messages, first);
+      transcript.push({ role: "user", text: first });
       break;
     }
   }
@@ -269,6 +285,7 @@ try {
   while (true) {
     const response = await runTurn(messages);
     console.log(`\n${getText(response)}\n`);
+    transcript.push({ role: "assistant", text: getText(response) });
 
     const { stop_reason } = response;
     if (stop_reason !== "end_turn") {
@@ -277,13 +294,14 @@ try {
     }
 
     // Press return on an empty line to exit
-    // Keep asking until the follow-up passes moderation (or the user exits)
+    // Keep asking until the follow-up passes both checks (or the user exits)
     let followUp = "";
     while (true) {
       followUp = (await rl.question("Follow-up (return to exit): ")).trim();
-      if (!followUp || (await passesModeration(followUp))) break;
+      if (!followUp || (await passesChecks(followUp))) break;
     }
     if (!followUp) break;
+    transcript.push({ role: "user", text: followUp });
     add_user_message(messages, followUp);
   }
 } finally {

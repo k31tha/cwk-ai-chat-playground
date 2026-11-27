@@ -1,9 +1,11 @@
 // Variant of basic-chat-with-tools-conversation-reasoning.ts that checks every user message
-// (the holiday prompt and each follow-up) with OpenAI's MODERATION API before it
-// reaches the main model. Flagged messages are rejected with the flagged
-// categories and never enter the conversation history. Same shape as
-// basic-chat-add-input-guardrail.ts so the two can be compared. Moderation
-// checks for harmful content, not topic, so off-topic but harmless messages pass.
+// (the holiday prompt and each follow-up) in TWO steps before it reaches the main
+// model: 1) OpenAI's MODERATION API (harmful content), then 2) the topic INPUT
+// GUARDRAIL from input-guardrail.ts (on or off topic, given the conversation so
+// far). A message must pass both. Rejected messages print the reason and never
+// enter the conversation history. Moderation alone lets off-topic harmless
+// messages through; the guardrail adds the topic check. Compare with
+// basic-chat-add-input-guardrail.ts (guardrail only).
 import dotenv from "dotenv";
 import { createInterface } from "node:readline/promises";
 import OpenAI from "openai";
@@ -19,8 +21,10 @@ import {
   askHolidayPrompt,
   getWeather,
   type TimePeriod,
+  type Turn,
 } from "../common/utils.js";
 import { model } from "./config.js";
+import { runInputGuardrail } from "./input-guardrail.js";
 import { runInputModeration } from "./input-moderation.js";
 
 // Load environment variables
@@ -145,25 +149,36 @@ const runTools = async (
   );
 
 // ---------------------------------------------------------------------------
-// Input moderation
+// Input checks (moderation, then guardrail)
 // ---------------------------------------------------------------------------
 
-// Moderation looks at one message at a time, so unlike the guardrail it needs
-// no record of the conversation. The call lives in ../openai/input-moderation.ts
-// so the evaluation script can reuse it.
+// Text-only record of the chat (user and assistant messages) for the guardrail,
+// which judges short follow-ups in context. Moderation ignores it.
+const transcript: Turn[] = [];
 
-/** Runs moderation, telling the user why if the input is blocked. */
-const passesModeration = async (text: string): Promise<boolean> => {
+// Both checks live in their own files so the evaluation scripts can reuse them.
+
+/** Runs both checks, telling the user why if the input is blocked. */
+const passesChecks = async (text: string): Promise<boolean> => {
   try {
-    const { flagged, reason } = await runInputModeration(text);
-    if (!flagged) return true;
+    // Step 1: moderation (harmful content)
+    const moderation = await runInputModeration(text);
+    if (moderation.flagged) {
+      console.warn(`
+[blocked] ${moderation.reason}
+`);
+      return false;
+    }
+    // Step 2: topic guardrail
+    const { label, reason } = await runInputGuardrail(text, transcript);
+    if (label === "ON_TOPIC") return true;
     console.warn(`
 [blocked] ${reason}
 `);
   } catch (err) {
-    // Fail closed: if moderation itself breaks, don't let the input through
+    // Fail closed: if a check itself breaks, don't let the input through
     console.warn(`
-[blocked] moderation error: ${String(err)}
+[blocked] input check error: ${String(err)}
 `);
   }
   return false;
@@ -226,13 +241,15 @@ try {
   let first = "";
   while (true) {
     first = await askHolidayPrompt(rl);
-    if (await passesModeration(first)) break;
+    if (await passesChecks(first)) break;
   }
+  transcript.push({ role: "user", text: first });
   let input: ResponseInput = [{ role: "user", content: first }];
 
   while (true) {
     const response = await runTurn(input);
     console.log(`\n${response.output_text}\n`);
+    transcript.push({ role: "assistant", text: response.output_text });
 
     if (response.status !== "completed") {
       const reason = response.incomplete_details?.reason ?? "unknown";
@@ -240,13 +257,14 @@ try {
     }
 
     // Press return on an empty line to exit
-    // Keep asking until the follow-up passes moderation (or the user exits)
+    // Keep asking until the follow-up passes both checks (or the user exits)
     let followUp = "";
     while (true) {
       followUp = (await rl.question("Follow-up (return to exit): ")).trim();
-      if (!followUp || (await passesModeration(followUp))) break;
+      if (!followUp || (await passesChecks(followUp))) break;
     }
     if (!followUp) break;
+    transcript.push({ role: "user", text: followUp });
     input = [{ role: "user", content: followUp }];
   }
 } finally {
