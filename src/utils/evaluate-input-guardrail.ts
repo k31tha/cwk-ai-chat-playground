@@ -1,11 +1,14 @@
 // Runs a JSON file of guardrail test cases (see generate-guardrail-cases.ts)
 // through the input guardrail and logs expected versus actual for each one.
 //
-//   pnpm tsx src/utils/evaluate-input-guardrail.ts [cases-file] [--sdk a|o] [--repeat N]
+//   pnpm tsx src/utils/evaluate-input-guardrail.ts [cases-file] [--sdk a|o] [--repeat N] [--no-history]
 //
 // cases-file  name of the cases JSON (default "guardrail-cases"). A bare name is
 //             read from data/; a path is used as given.
 // --sdk / -s  a = Anthropic, o = OpenAI. Leave it out to run both.
+// --no-history  ignore the earlier turns of each case and judge the last message
+//             alone. Follow-up cases such as "what about May?" should now fail,
+//             which shows the conversation context is doing the work.
 // --repeat / -r  run every case N times (default 1) to see whether a verdict is
 //             stable. Each run is its own result, and with N above 1 the summary
 //             lists the cases whose runs disagreed as `unstable`.
@@ -66,6 +69,7 @@ const { values, positionals } = parseArgs({
     sdk: { type: "string", short: "s" },
     concurrency: { type: "string", short: "c", default: "4" },
     repeat: { type: "string", short: "r", default: "1" },
+    "no-history": { type: "boolean", default: false },
   },
 });
 
@@ -73,6 +77,7 @@ if (values.sdk !== undefined && values.sdk !== "a" && values.sdk !== "o") {
   console.error(`--sdk must be "a" (Anthropic) or "o" (OpenAI), got "${values.sdk}"`);
   process.exit(1);
 }
+const noHistory = values["no-history"];
 const repeat = Number(values.repeat);
 if (!Number.isInteger(repeat) || repeat < 1) {
   console.error(`--repeat must be a positive whole number, got "${values.repeat}"`);
@@ -93,14 +98,14 @@ try {
 
 const results: EvalResult[] = [];
 for (const sdk of selected) {
-  console.log(`\n# ${sdk.name} (${sdk.model}), ${parsed.cases.length} cases${repeat > 1 ? `, ${repeat} runs each` : ""}`);
+  console.log(`\n# ${sdk.name} (${sdk.model}), ${parsed.cases.length} cases${repeat > 1 ? `, ${repeat} runs each` : ""}${noHistory ? ", history removed" : ""}`);
   // Every case once per repeat, so the pool treats each run as its own item
   const runs = parsed.cases.flatMap((c) => Array.from({ length: repeat }, (_, i) => ({ c, run: i + 1 })));
   const sdkResults = await mapPool(runs, concurrency, async ({ c, run }) => {
     const started = Date.now();
     let result: EvalResult;
     try {
-      const verdict = await sdk.run(c.prompt, c.history);
+      const verdict = await sdk.run(c.prompt, noHistory ? [] : c.history);
       result = {
         id: c.id,
         category: c.category,
@@ -177,7 +182,7 @@ const outPath = path.join(RESULTS_DIR, `${path.basename(casesPath, ".json")}-${s
 await mkdir(RESULTS_DIR, { recursive: true });
 await writeFile(
   outPath,
-  `${JSON.stringify({ casesFile: casesPath, repeat, runAt: new Date().toISOString(), summary, results }, null, 2)}\n`,
+  `${JSON.stringify({ casesFile: casesPath, repeat, noHistory, runAt: new Date().toISOString(), summary, results }, null, 2)}\n`,
   "utf-8",
 );
 console.log(`\nFull results saved to ${outPath}`);

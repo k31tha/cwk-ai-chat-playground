@@ -113,6 +113,7 @@ Options of `pnpm guardrail:eval`:
 | `<cases-file>` (first argument) | `guardrail-cases` | Cases JSON to run. A bare name is read from `data/`; a path is used as given |
 | `--sdk`, `-s` | both | `a` = Anthropic, `o` = OpenAI |
 | `--repeat`, `-r` | `1` | Run every case this many times. Each run is its own result with a `run` number, the summary counts runs, and cases whose runs disagree are listed as `unstable` |
+| `--no-history` | off | Ignore the earlier turns of each case and judge the last message alone. Follow-up cases like "what about May?" should now fail, which shows the conversation context is doing the work |
 | `--concurrency`, `-c` | `4` | How many calls to make at once |
 
 Each result is logged as a JSON line (`sdk`, `model`, `prompt`, `expected`, `actual`, `pass`, plus `run` when `--repeat` is above 1) and the full results are saved in `data/results/` (git-ignored). `data/guardrail-cases.json` is a committed sample.
@@ -132,6 +133,9 @@ pnpm moderation:eval -- guardrail-cases-50 -s o
 
 # Run every case 3 times to see which verdicts are stable (an LLM guardrail can answer differently on the same input)
 pnpm moderation:eval -- --repeat 3
+
+# Judge the guardrails without the conversation history (moderation never uses it)
+pnpm moderation:eval -- guardrail-cases-50 --no-history
 
 # Generate more cases across harmless, off-topic, injection, borderline and harmful categories (default 27)
 pnpm moderation:generate -- --count 90 --out my-moderation-cases
