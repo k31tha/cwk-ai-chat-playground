@@ -6,7 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "guardrail:generate": "tsx src/utils/generate-guardrail-cases.ts",
-    "guardrail:eval": "tsx src/utils/evaluate-input-guardrail.ts"
+    "guardrail:eval": "tsx src/utils/evaluate-input-guardrail.ts",
+    "moderation:generate": "tsx src/utils/generate-moderation-cases.ts",
+    "moderation:eval": "tsx src/utils/evaluate-input-moderation.ts"
   },
   "keywords": [
     "ai",
