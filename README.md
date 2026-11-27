@@ -86,7 +86,16 @@ pnpm tsx src/utils/generate-code-request-cases.ts --count 40 --out my-code-cases
 pnpm guardrail:eval -- guardrail-cases-code-generated --repeat 3
 ```
 
-Each result is logged as a JSON line (`sdk`, `model`, `prompt`, `expected`, `actual`, `pass`) and the full results are saved in `data/results/` (git-ignored). `data/guardrail-cases.json` is a committed sample.
+Options of `pnpm guardrail:eval`:
+
+| Option | Default | What it does |
+|---|---|---|
+| `<cases-file>` (first argument) | `guardrail-cases` | Cases JSON to run. A bare name is read from `data/`; a path is used as given |
+| `--sdk`, `-s` | both | `a` = Anthropic, `o` = OpenAI |
+| `--repeat`, `-r` | `1` | Run every case this many times. Each run is its own result with a `run` number, the summary counts runs, and cases whose runs disagree are listed as `unstable` |
+| `--concurrency`, `-c` | `4` | How many calls to make at once |
+
+Each result is logged as a JSON line (`sdk`, `model`, `prompt`, `expected`, `actual`, `pass`, plus `run` when `--repeat` is above 1) and the full results are saved in `data/results/` (git-ignored). `data/guardrail-cases.json` is a committed sample.
 
 ## Comparing moderation with the guardrail
 
