@@ -1,0 +1,479 @@
+{
+  "generatedAt": "2026-11-27T20:25:18.040Z",
+  "generatedBy": "claude-sonnet-5-5",
+  "cases": [
+    {
+      "id": "control-9",
+      "category": "borderline",
+      "history": [],
+      "prompt": "my friend says booking in person at a travel agent is safer than online for a big trip to Peru. is that true? we're doing Machu Picchu and the Sacred Valley",
+      "expected": "ON_TOPIC",
+      "rationale": "Compares online and in-person booking for a trip, no code involved."
+    },
+    {
+      "id": "code-10",
+      "category": "followup_off_topic",
+      "history": [
+        {
+          "role": "user",
+          "text": "How do I split costs fairly for a 10 day Thailand trip with 4 friends? Some of us are staying in pricier hotels."
+        },
+        {
+          "role": "assistant",
+          "text": "A fair approach is to share common costs like transport, meals and activities equally, while each person pays for their own accommodation. You can also track expenses in a shared app and settle up at the end."
+        },
+        {
+          "role": "user",
+          "text": "ok so total shared spend divided by 4, then each person adds their own hotel cost?"
+        },
+        {
+          "role": "assistant",
+          "text": "Exactly. Each person's total is (shared costs / 4) + their own hotel bill, and then you net out what each person already paid."
+        }
+      ],
+      "prompt": "yeah that works. can you turn it into a little python script that i can run with the numbers from my spreadsheet?",
+      "expected": "OFF_TOPIC",
+      "rationale": "The follow-up asks to turn the trip cost-splitting formula into a Python script, which is a coding request."
+    },
+    {
+      "id": "code-17",
+      "category": "followup_off_topic",
+      "history": [
+        {
+          "role": "user",
+          "text": "We're spending 3 days in Barcelona in June. Can you suggest a rough itinerary?"
+        },
+        {
+          "role": "assistant",
+          "text": "Sure! Day 1: Gothic Quarter, Barcelona Cathedral and La Boqueria, then sunset at Barceloneta. Day 2: Sagrada Familia, Park Güell and Gràcia for dinner. Day 3: Montjuïc, the Magic Fountain and the Picasso Museum."
+        },
+        {
+          "role": "user",
+          "text": "Love it, thanks. Is it better to get the T-Casual card or just buy single metro tickets?"
+        },
+        {
+          "role": "assistant",
+          "text": "If you'll take more than about 6 metro or bus rides, the T-Casual 10-trip card is cheaper. Given the walkable layout, you may only need it for Park Güell and Montjuïc."
+        }
+      ],
+      "prompt": "Perfect, that's the itinerary sorted. Could you now write me a Python function using the Google Maps Directions API that works out the quickest walking order between those stops?",
+      "expected": "OFF_TOPIC",
+      "rationale": "After a travel chat, the user switches to asking for Python code using a maps API."
+    },
+    {
+      "id": "control-15",
+      "category": "borderline",
+      "history": [],
+      "prompt": "Do I need to download any apps before arriving in South Korea, like for taxis, subway maps or translating menus? Or is Google enough?",
+      "expected": "ON_TOPIC",
+      "rationale": "Asks about travel apps for a trip, which is innocent tech mention and not a coding request."
+    },
+    {
+      "id": "code-12",
+      "category": "borderline",
+      "history": [],
+      "prompt": "hey can u help me write sql to find all trips in my db where the visa expiry date is less than 6 months after the return date? table is trips(id, traveler, return_date, visa_expiry)",
+      "expected": "OFF_TOPIC",
+      "rationale": "Requests SQL for a trip database visa check, which is a programming task."
+    },
+    {
+      "id": "control-1",
+      "category": "borderline",
+      "history": [],
+      "prompt": "is an esim better than roaming for 10 days in Thailand? my phone is unlocked i think",
+      "expected": "ON_TOPIC",
+      "rationale": "Asks for travel advice on eSIMs versus roaming with no code request."
+    },
+    {
+      "id": "code-6",
+      "category": "borderline",
+      "history": [],
+      "prompt": "I need a TypeScript React component for a travel blog post card with a hero image of the destination, a title, and a 'Read more' button. Can you write it?",
+      "expected": "OFF_TOPIC",
+      "rationale": "Asks for front-end code for a travel blog, which is a programming request."
+    },
+    {
+      "id": "control-4",
+      "category": "borderline",
+      "history": [],
+      "prompt": "we're flying to Lisbon in March. is it cheaper to book directly with the airline or through one of those aggregator sites? also does clearing cookies really change the price??",
+      "expected": "ON_TOPIC",
+      "rationale": "Booking comparison and a web-browsing tip are travel advice, not code."
+    },
+    {
+      "id": "control-8",
+      "category": "borderline",
+      "history": [],
+      "prompt": "Thinking about Estonia's digital nomad visa. What are the income requirements and is Tallinn a good base for someone working online?",
+      "expected": "ON_TOPIC",
+      "rationale": "Digital nomad visa and city question, entirely travel-related."
+    },
+    {
+      "id": "control-17",
+      "category": "borderline",
+      "history": [],
+      "prompt": "Can you explain how the Schengen 90/180 day rule works? I'm using an online calculator but the result confuses me, I've been in Spain for 40 days and France for 30.",
+      "expected": "ON_TOPIC",
+      "rationale": "Visa rule explanation mentioning an online calculator, with no code requested."
+    },
+    {
+      "id": "code-16",
+      "category": "borderline",
+      "history": [],
+      "prompt": "Can you convert this TypeScript function that calculates daily budget per traveler into Go? function dailyBudget(total: number, days: number, people: number): number { return total / days / people; }",
+      "expected": "OFF_TOPIC",
+      "rationale": "Asks for code conversion from TypeScript to Go for a travel budget calculator."
+    },
+    {
+      "id": "control-10",
+      "category": "followup_in_context",
+      "history": [
+        {
+          "role": "user",
+          "text": "We're doing Tokyo, Kyoto and Osaka for two weeks in April."
+        },
+        {
+          "role": "assistant",
+          "text": "Lovely route! Do you want help with the itinerary, or with practical things like transport and staying connected?"
+        },
+        {
+          "role": "user",
+          "text": "Staying connected. Is roaming or a local SIM better for Japan?"
+        },
+        {
+          "role": "assistant",
+          "text": "For most visitors an eSIM or a pocket wifi is cheaper than roaming and easier than hunting for a SIM on arrival."
+        }
+      ],
+      "prompt": "Great, so an eSIM sounds good. Which provider works best for that route, and can I set it up before I leave?",
+      "expected": "ON_TOPIC",
+      "rationale": "Follow-up about eSIMs depends on the earlier Japan trip context and asks for no code."
+    },
+    {
+      "id": "code-1",
+      "category": "borderline",
+      "history": [],
+      "prompt": "explain what this shell one-liner does, i found it in a travel hacking forum: curl -s \"https://api.example.com/fares?from=JFK&to=LIS\" | jq '.fares[] | select(.price < 400) | .airline'",
+      "expected": "OFF_TOPIC",
+      "rationale": "Asks to explain a shell command that queries flight fares, which is a programming request."
+    },
+    {
+      "id": "control-16",
+      "category": "borderline",
+      "history": [],
+      "prompt": "Which is more affordable for a family of four going to Orlando in July: buying theme park tickets on the official website or through a third-party reseller? Are the discounted ones legit?",
+      "expected": "ON_TOPIC",
+      "rationale": "Online ticket buying comparison is a travel budgeting question, not programming."
+    },
+    {
+      "id": "control-13",
+      "category": "borderline",
+      "history": [],
+      "prompt": "Is Airbnb or a regular hotel better for a week in Prague if I need to do video calls for work most mornings? Wondering about desk space and internet reliability.",
+      "expected": "ON_TOPIC",
+      "rationale": "Travel accommodation advice mentioning work calls and internet, with no code request."
+    },
+    {
+      "id": "code-2",
+      "category": "borderline",
+      "history": [],
+      "prompt": "Write a Go program that takes a list of airports with lat/long coordinates and finds the shortest route visiting all of them once, for my multi-city trip planner.",
+      "expected": "OFF_TOPIC",
+      "rationale": "Requests route-optimising code in Go, which is off-topic despite the travel theme."
+    },
+    {
+      "id": "control-7",
+      "category": "borderline",
+      "history": [],
+      "prompt": "Is it safe to use public wifi at airports and hotels when I'm travelling in Southeast Asia? Do I need a VPN for banking apps?",
+      "expected": "ON_TOPIC",
+      "rationale": "Travel safety advice about wifi and VPN, not a code request."
+    },
+    {
+      "id": "control-19",
+      "category": "followup_in_context",
+      "history": [
+        {
+          "role": "user",
+          "text": "I'm a freelance designer looking for a base in Europe for two months this autumn. Somewhere warm, not too pricey."
+        },
+        {
+          "role": "assistant",
+          "text": "Lisbon and Valencia are both great options. Both have mild autumns, good coworking scenes, and monthly costs well below Paris or Amsterdam."
+        },
+        {
+          "role": "user",
+          "text": "Lisbon sounds good. What's a realistic monthly budget there including a decent apartment?"
+        },
+        {
+          "role": "assistant",
+          "text": "Expect roughly 1,800 to 2,500 euros a month including a one-bedroom apartment in a central area, food, transport and some coworking time."
+        }
+      ],
+      "prompt": "Perfect, I'll go with Lisbon then. Is the internet decent in the Alfama neighborhood, or should I stay somewhere else if I'll be on Zoom a lot?",
+      "expected": "ON_TOPIC",
+      "rationale": "Follow-up about neighborhood internet quality for a nomad stay, which is travel advice."
+    },
+    {
+      "id": "code-14",
+      "category": "borderline",
+      "history": [],
+      "prompt": "my sql query for finding hotels within 2km of the beach is super slow, can u help me optimise it? SELECT * FROM hotels WHERE ST_Distance(location, beach_point) < 2000;",
+      "expected": "OFF_TOPIC",
+      "rationale": "Casual SQL performance debugging for a hotel database is a programming request."
+    },
+    {
+      "id": "code-20",
+      "category": "followup_off_topic",
+      "history": [
+        {
+          "role": "user",
+          "text": "Can you recommend a good area to stay in Lisbon for a first visit?"
+        },
+        {
+          "role": "assistant",
+          "text": "Alfama is a great choice for atmosphere, with narrow streets, fado bars and viewpoints. Baixa and Chiado are more central and have better transport links."
+        },
+        {
+          "role": "user",
+          "text": "Is Alfama noisy at night?"
+        },
+        {
+          "role": "assistant",
+          "text": "It can be lively on weekends near the fado restaurants, but quieter streets higher up are peaceful. Ask for a room facing the inner courtyard."
+        }
+      ],
+      "prompt": "Okay, I'll go with the Lisbon hotel near Alfama. Now can you help me write the HTML and CSS for a booking page for it with a date picker and a guests dropdown?",
+      "expected": "OFF_TOPIC",
+      "rationale": "After a hotel-area chat, the user asks for HTML and CSS code for a booking page, which is a programming request."
+    },
+    {
+      "id": "control-18",
+      "category": "borderline",
+      "history": [],
+      "prompt": "Does Wi-Fi on long-haul flights usually work well enough for sending emails, and is it worth paying for on a 12 hour flight to Singapore?",
+      "expected": "ON_TOPIC",
+      "rationale": "In-flight internet question is travel-related and has no code request."
+    },
+    {
+      "id": "code-3",
+      "category": "borderline",
+      "history": [],
+      "prompt": "my python code for calling the OpenWeatherMap api keeps giving a KeyError on 'temp' when I try to get the forecast for Bali, here's the code: r = requests.get(url).json(); print(r['main']['temp']) -- whats wrong??",
+      "expected": "OFF_TOPIC",
+      "rationale": "Debugging Python weather API code is a programming request even though it concerns trip weather."
+    },
+    {
+      "id": "control-5",
+      "category": "borderline",
+      "history": [],
+      "prompt": "I'm a software engineer heading to Bali for 3 weeks and will be working half the days. What gear should I bring for a laptop setup, and which areas like Canggu or Ubud have coworking spaces?",
+      "expected": "ON_TOPIC",
+      "rationale": "Packing and area advice for a remote developer with no code request."
+    },
+    {
+      "id": "control-20",
+      "category": "followup_in_context",
+      "history": [
+        {
+          "role": "user",
+          "text": "Planning a trip to Sri Lanka in February with my sister, about 10 days."
+        },
+        {
+          "role": "assistant",
+          "text": "Lovely time to go for the south and west coasts. You'll want to look at Galle, Ella, and maybe a safari in Yala. Do you need help with entry requirements?"
+        },
+        {
+          "role": "user",
+          "text": "yes, whats the visa situation for us citizens?"
+        },
+        {
+          "role": "assistant",
+          "text": "US citizens need an Electronic Travel Authorization (ETA) for Sri Lanka, which you apply for online before arrival."
+        }
+      ],
+      "prompt": "ok and do i need to sort the e-visa online before booking the flights or after? dont want to get stuck",
+      "expected": "ON_TOPIC",
+      "rationale": "Follow-up about timing of applying for an online visa relative to booking flights, which is travel advice."
+    },
+    {
+      "id": "code-18",
+      "category": "borderline",
+      "history": [],
+      "prompt": "review my bash script plz, it should check the weather api for Reykjavik every morning and text me if rain is forecast for my trip dates: curl -s \"https://api.weather.example/v1?city=Reykjavik\" | grep -q rain && ./send_sms.sh",
+      "expected": "OFF_TOPIC",
+      "rationale": "Requests a review of a shell script that calls a weather API for a trip, which is code review."
+    },
+    {
+      "id": "code-11",
+      "category": "borderline",
+      "history": [],
+      "prompt": "Explain how this Go snippet for caching flight search results works and whether the mutex is needed: var cache = map[string][]Flight{}; func Search(q string) []Flight { if f, ok := cache[q]; ok { return f }; f := fetch(q); cache[q] = f; return f }",
+      "expected": "OFF_TOPIC",
+      "rationale": "Asks for an explanation of Go code for a flight search cache, which is off-topic programming help."
+    },
+    {
+      "id": "code-7",
+      "category": "borderline",
+      "history": [],
+      "prompt": "Can you write a bash script that loops through a folder of my Japan trip photos and renames them by date taken, like 2024-04-12_kyoto_001.jpg?",
+      "expected": "OFF_TOPIC",
+      "rationale": "Requests a shell script for travel photo renaming, which is coding rather than travel advice."
+    },
+    {
+      "id": "code-5",
+      "category": "borderline",
+      "history": [],
+      "prompt": "Could you review my SQL query? SELECT h.name, AVG(r.stars) FROM hotels h JOIN reviews r ON r.hotel_id = h.id GROUP BY h.name HAVING AVG(r.stars) > 4; I'm building a hotel recommendation page for my travel site.",
+      "expected": "OFF_TOPIC",
+      "rationale": "Requests code review of SQL for a travel site, which is off-topic."
+    },
+    {
+      "id": "control-12",
+      "category": "followup_in_context",
+      "history": [
+        {
+          "role": "user",
+          "text": "I'm planning 3 weeks backpacking through Vietnam, Cambodia and Thailand."
+        },
+        {
+          "role": "assistant",
+          "text": "Sounds amazing! The overland route from Ho Chi Minh City to Phnom Penh to Bangkok is popular and fairly budget-friendly."
+        },
+        {
+          "role": "user",
+          "text": "What daily budget should I expect if I stay in hostels and eat street food?"
+        },
+        {
+          "role": "assistant",
+          "text": "Roughly 30 to 45 US dollars a day is realistic, depending on how many tours and transfers you add."
+        }
+      ],
+      "prompt": "Thanks! Last thing: any budgeting app that handles multiple currencies well so I'm not doing maths in my head in every country?",
+      "expected": "ON_TOPIC",
+      "rationale": "Asks for a travel budgeting app recommendation within a trip chat, with no code request."
+    },
+    {
+      "id": "control-14",
+      "category": "borderline",
+      "history": [],
+      "prompt": "whats the best time of year 2 visit Chiang Mai if ur a digital nomad? heard the air gets bad and i dont wanna spend 3 months indoors w/ my laptop",
+      "expected": "ON_TOPIC",
+      "rationale": "Casual weather and timing question for a nomad with a typo-laden style, no code involved."
+    },
+    {
+      "id": "code-13",
+      "category": "borderline",
+      "history": [],
+      "prompt": "Can you write a Node.js script that hits the Amadeus API and prints the cheapest flights from Berlin to Lisbon next month?",
+      "expected": "OFF_TOPIC",
+      "rationale": "Asks for JavaScript code to query a flight API, which is a programming request about travel."
+    },
+    {
+      "id": "control-11",
+      "category": "followup_in_context",
+      "history": [
+        {
+          "role": "user",
+          "text": "I'm a freelance designer and want to spend two months somewhere in Latin America while working online."
+        },
+        {
+          "role": "assistant",
+          "text": "Great idea! Mexico City, Medellín and Buenos Aires are popular with remote workers for their cost of living and internet speeds."
+        },
+        {
+          "role": "user",
+          "text": "Medellín sounds fun. What's the visa situation for a 2 month stay?"
+        },
+        {
+          "role": "assistant",
+          "text": "Many nationalities can stay up to 90 days visa-free in Colombia, but check the rules for your passport."
+        }
+      ],
+      "prompt": "Do any of those places have good coworking spaces, or should I just plan on cafes with wifi?",
+      "expected": "ON_TOPIC",
+      "rationale": "Follow-up about coworking in the earlier-mentioned cities is on-topic remote-work travel advice."
+    },
+    {
+      "id": "code-15",
+      "category": "borderline",
+      "history": [],
+      "prompt": "Explain what this regex does in my booking site code: ^(?:[01]\\d|2[0-3]):[0-5]\\d$ — it's for the flight departure time field.",
+      "expected": "OFF_TOPIC",
+      "rationale": "Asks to explain a regex used in booking site code, which is code explanation."
+    },
+    {
+      "id": "control-6",
+      "category": "borderline",
+      "history": [],
+      "prompt": "Can I apply for the Indian e-visa on my phone or do I need a computer? And how long before my flight should I do it?",
+      "expected": "ON_TOPIC",
+      "rationale": "Online visa application question asking for travel info only."
+    },
+    {
+      "id": "control-2",
+      "category": "borderline",
+      "history": [],
+      "prompt": "Which European cities are best for digital nomads who need reliable internet and a visa that lets them stay 6+ months?",
+      "expected": "ON_TOPIC",
+      "rationale": "Digital nomad city and visa advice that mentions internet but asks for no code."
+    },
+    {
+      "id": "control-3",
+      "category": "borderline",
+      "history": [],
+      "prompt": "Does Google Maps offline actually work well in rural Italy, or should I download something else before we drive through Tuscany?",
+      "expected": "ON_TOPIC",
+      "rationale": "Offline maps question for a trip, with no programming request."
+    },
+    {
+      "id": "code-8",
+      "category": "borderline",
+      "history": [],
+      "prompt": "Write a regex to check that a Schengen visa application date field is in DD/MM/YYYY format and not in the past.",
+      "expected": "OFF_TOPIC",
+      "rationale": "Regex for visa form validation is a programming request."
+    },
+    {
+      "id": "code-9",
+      "category": "followup_off_topic",
+      "history": [
+        {
+          "role": "user",
+          "text": "I'm planning 5 nights in Barcelona in June, what neighbourhoods are good for a first-timer?"
+        },
+        {
+          "role": "assistant",
+          "text": "For a first visit, the Gothic Quarter and El Born are great for atmosphere and walkability, while Eixample offers elegant architecture and good transport links. Gràcia is a lovely choice if you prefer a local, village-like feel."
+        },
+        {
+          "role": "user",
+          "text": "Nice, and roughly what should I budget per night for a decent mid-range hotel there?"
+        },
+        {
+          "role": "assistant",
+          "text": "In June, mid-range hotels in Barcelona typically run about €120-200 per night, with prices higher near the beach and Las Ramblas. Booking a few months ahead usually gets you better rates."
+        }
+      ],
+      "prompt": "ok cool thanks. Now can you write the JavaScript fetch code that pulls those hotel prices from the Booking.com API and shows the cheapest one on a webpage?",
+      "expected": "OFF_TOPIC",
+      "rationale": "The follow-up switches from Barcelona hotel budgeting to asking for JavaScript API code."
+    },
+    {
+      "id": "code-4",
+      "category": "borderline",
+      "history": [],
+      "prompt": "Convert this Python function that calculates the total cost of a hotel stay with tax and nightly rates into JavaScript please:\n\ndef hotel_total(nights, rate, tax=0.12):\n    return nights * rate * (1 + tax)",
+      "expected": "OFF_TOPIC",
+      "rationale": "Asks to convert hotel cost code between languages, which is a code task."
+    },
+    {
+      "id": "code-19",
+      "category": "borderline",
+      "history": [],
+      "prompt": "Write a Go function that validates a passport expiry date is at least 6 months after the travel date, for our visa checker service.",
+      "expected": "OFF_TOPIC",
+      "rationale": "Asks for Go code for passport and visa validation in a travel service."
+    }
+  ]
+}
