@@ -2,13 +2,16 @@
 // guardrail, one case at a time, and compares them on the same cases. Works with
 // the files made by generate-moderation-cases.ts and generate-guardrail-cases.ts.
 //
-//   pnpm tsx src/utils/evaluate-input-moderation.ts [cases-file] [--sdk a|o] [--moderation-only] [--repeat N]
+//   pnpm tsx src/utils/evaluate-input-moderation.ts [cases-file] [--sdk a|o] [--moderation-only] [--repeat N] [--no-history]
 //
 // cases-file         name of the cases JSON (default "moderation-cases"). A bare
 //                    name is read from data/; a path is used as given.
 // --sdk / -s         which guardrail to compare with: a = Anthropic, o = OpenAI.
 //                    Leave it out to run both.
 // --moderation-only  skip the guardrails (moderation is free)
+// --no-history      ignore the earlier turns of each case and judge the last message
+//                    alone (moderation never sees history; this changes only the
+//                    guardrails). Follow-up cases should now fail.
 // --repeat / -r      run every case N times (default 1) to see whether a verdict
 //                    is stable. An LLM guardrail can answer differently on the
 //                    same input; a case whose runs disagree is reported as unstable.
@@ -54,6 +57,7 @@ const { values, positionals } = parseArgs({
     sdk: { type: "string", short: "s" },
     "moderation-only": { type: "boolean", default: false },
     repeat: { type: "string", short: "r", default: "1" },
+    "no-history": { type: "boolean", default: false },
   },
 });
 
@@ -61,6 +65,7 @@ if (values.sdk !== undefined && values.sdk !== "a" && values.sdk !== "o") {
   console.error(`--sdk must be "a" (Anthropic) or "o" (OpenAI), got "${values.sdk}"`);
   process.exit(1);
 }
+const noHistory = values["no-history"];
 const repeat = Number(values.repeat);
 if (!Number.isInteger(repeat) || repeat < 1) {
   console.error(`--repeat must be a positive whole number, got "${values.repeat}"`);
@@ -100,7 +105,7 @@ const isUnstable = (runs: Decision[]) => new Set(runs).size > 1;
 const show = (runs: Decision[]) => (isUnstable(runs) ? `${runs.join("/")}(UNSTABLE)` : (runs[0] ?? "error"));
 
 console.log(
-  `${parsed.cases.length} cases, one at a time${repeat > 1 ? `, ${repeat} runs each` : ""}: ` +
+  `${parsed.cases.length} cases, one at a time${repeat > 1 ? `, ${repeat} runs each` : ""}${noHistory ? ", history removed" : ""}: ` +
     `moderation${guardrails.map((g) => ` + ${g.name} guardrail`).join("")}\n`,
 );
 
@@ -127,7 +132,7 @@ for (const [i, c] of parsed.cases.entries()) {
     for (const g of guardrails) {
       let guardrail: Decision;
       try {
-        guardrail = toDecision((await g.run(c.prompt, c.history)).label === "OFF_TOPIC");
+        guardrail = toDecision((await g.run(c.prompt, noHistory ? [] : c.history)).label === "OFF_TOPIC");
       } catch {
         guardrail = "error";
       }
@@ -179,5 +184,5 @@ console.log(JSON.stringify(summary, null, 2));
 const stamp = new Date().toISOString().replace(/[:.]/g, "-");
 const outPath = path.join(RESULTS_DIR, `${path.basename(casesPath, ".json")}-moderation-${stamp}.json`);
 await mkdir(RESULTS_DIR, { recursive: true });
-await writeFile(outPath, `${JSON.stringify({ casesFile: casesPath, repeat, summary, rows }, null, 2)}\n`, "utf-8");
+await writeFile(outPath, `${JSON.stringify({ casesFile: casesPath, repeat, noHistory, summary, rows }, null, 2)}\n`, "utf-8");
 console.log(`\nSaved to ${outPath}`);
