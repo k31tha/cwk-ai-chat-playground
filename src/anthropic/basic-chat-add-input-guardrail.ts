@@ -4,6 +4,20 @@
 // verdict. Only allowed messages reach the main model; blocked ones are rejected
 // with a reason and never enter the conversation history. Kept as a separate
 // file so the other examples stay unchanged.
+//
+// WHAT CHANGED compared with basic-chat-with-tools-reasoning.ts (about 45 lines):
+//   1. Two new imports: `Turn`, and `runInputGuardrail` from ./input-guardrail.ts,
+//      which holds the guardrail call itself.
+//   2. A new "Input guardrail" section with `transcript` (a text-only record of
+//      the chat) and `passesGuardrail()`, which asks the guardrail and blocks the
+//      message if it is off topic or if the guardrail call fails.
+//   3. In the chat loop at the bottom, the first message and every follow-up are
+//      only added to `messages` once `passesGuardrail()` says yes (otherwise the
+//      user is asked again). Each user and assistant turn is also pushed to
+//      `transcript`.
+// The tools, the tool loop and the reasoning output are unchanged. To see the
+// exact lines:
+//   diff src/anthropic/basic-chat-with-tools-reasoning.ts src/anthropic/basic-chat-add-input-guardrail.ts
 import Anthropic from "@anthropic-ai/sdk";
 import dotenv from "dotenv";
 import { createInterface } from "node:readline/promises";

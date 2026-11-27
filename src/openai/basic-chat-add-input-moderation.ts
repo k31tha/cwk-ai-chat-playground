@@ -6,6 +6,16 @@
 // enter the conversation history. Moderation alone lets off-topic harmless
 // messages through; the guardrail adds the topic check. Compare with
 // basic-chat-add-input-guardrail.ts (guardrail only).
+//
+// WHAT CHANGED compared with basic-chat-add-input-guardrail.ts (about 30 lines):
+//   1. One new import: `runInputModeration` from ./input-moderation.ts (the
+//      OpenAI Moderation API call).
+//   2. `passesGuardrail()` is renamed `passesChecks()` and runs moderation first,
+//      then the topic guardrail. The message is blocked if either one blocks it,
+//      or if either call fails.
+//   3. The places that called `passesGuardrail()` now call `passesChecks()`.
+// Everything else is the same as the guardrail example. To see the exact lines:
+//   diff src/openai/basic-chat-add-input-guardrail.ts src/openai/basic-chat-add-input-moderation.ts
 import dotenv from "dotenv";
 import { createInterface } from "node:readline/promises";
 import OpenAI from "openai";
@@ -164,22 +174,16 @@ const passesChecks = async (text: string): Promise<boolean> => {
     // Step 1: moderation (harmful content)
     const moderation = await runInputModeration(text);
     if (moderation.flagged) {
-      console.warn(`
-[blocked] ${moderation.reason}
-`);
+      console.warn(`\n[blocked] ${moderation.reason}\n`);
       return false;
     }
     // Step 2: topic guardrail
     const { label, reason } = await runInputGuardrail(text, transcript);
     if (label === "ON_TOPIC") return true;
-    console.warn(`
-[blocked] ${reason}
-`);
+    console.warn(`\n[blocked] ${reason}\n`);
   } catch (err) {
     // Fail closed: if a check itself breaks, don't let the input through
-    console.warn(`
-[blocked] input check error: ${String(err)}
-`);
+    console.warn(`\n[blocked] input check error: ${String(err)}\n`);
   }
   return false;
 };
