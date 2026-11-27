@@ -10,7 +10,7 @@ export const MODERATION_CATEGORIES = [
   "hate_harassment",
   "violence_threat",
   "self_harm",
-  "sexual",
+  "adult_content_request",
   "illicit",
 ] as const;
 export type ModerationCategory = (typeof MODERATION_CATEGORIES)[number];
