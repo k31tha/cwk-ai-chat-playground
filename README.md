@@ -77,6 +77,9 @@ pnpm guardrail:eval -- my-cases -s a
 
 # Run every case 3 times; the summary lists cases whose verdict changed between runs as unstable
 pnpm guardrail:eval -- my-cases --repeat 3
+
+# 12 hand-written cases for the programming-help rule: 6 travel-flavoured coding requests (expected OFF_TOPIC) and 6 near-miss travel questions (expected ON_TOPIC)
+pnpm guardrail:eval -- guardrail-cases-code --repeat 3
 ```
 
 Each result is logged as a JSON line (`sdk`, `model`, `prompt`, `expected`, `actual`, `pass`) and the full results are saved in `data/results/` (git-ignored). `data/guardrail-cases.json` is a committed sample.
