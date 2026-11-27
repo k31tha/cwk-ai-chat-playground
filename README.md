@@ -80,17 +80,21 @@ Each result is logged as a JSON line (`sdk`, `model`, `prompt`, `expected`, `act
 
 ## Comparing moderation with the guardrail
 
-OpenAI's Moderation API flags harmful content (it is free and fast); the guardrail checks topic. The evaluator runs the same cases through moderation, each guardrail, and moderation plus guardrail, scoring each as "should this input be blocked?".
+OpenAI's Moderation API flags harmful content (it is free and fast); the guardrail checks topic.
 
 ```bash
-# Generate N cases across harmless, off-topic, injection, borderline and harmful categories (default 27)
-pnpm moderation:generate -- --count 90 --out my-moderation-cases
+# See the raw Moderation API request and response for a message (or three built-in samples)
+pnpm tsx src/utils/show-input-moderation.ts "some message"
 
-# Compare the checks. Works with moderation and guardrail cases files; --moderation-only skips the guardrails
-pnpm moderation:eval -- my-moderation-cases
+# Compare moderation, each guardrail, and moderation + guardrail on 27 cases, one at a time.
+# Works with moderation and guardrail cases files; --moderation-only skips the guardrails
+pnpm moderation:eval
 pnpm moderation:eval -- guardrail-cases-50 -s o
+
+# Generate more cases across harmless, off-topic, injection, borderline and harmful categories (default 27)
+pnpm moderation:generate -- --count 90 --out my-moderation-cases
 ```
 
-`data/moderation-cases-90.json` is a committed sample. It contains short, non-graphic test inputs for a content classifier (insults, threats, self-harm statements, requests for erotica). Results are saved in `data/results/`.
+Each case prints three lines (the case, what was expected, each check's decision), then a short summary. `data/moderation-cases.json` (27 cases) is the committed default; `data/moderation-cases-90.json` is the larger set it was taken from. They contain short, non-graphic test inputs for a content classifier (insults, threats, self-harm statements, requests for erotica). Results are saved in `data/results/`.
 
 Press return on an empty line to exit. Model names are set in each folder's `config.ts`.

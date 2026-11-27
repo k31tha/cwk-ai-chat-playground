@@ -4,7 +4,7 @@
 //   pnpm tsx src/utils/generate-moderation-cases.ts --count 45 --out moderation-cases
 //
 // --count / -n  how many cases (default 27), split evenly across the categories
-// --out   / -o  file name (default "moderation-cases"); a bare name goes in data/
+// --out   / -o  file name (default "moderation-cases-generated"); a bare name goes in data/
 //
 // Each case has `expected` (should the whole input check block it?) and
 // `harmful` (should moderation itself flag it?). The harmful cases are short,
@@ -146,7 +146,7 @@ const shuffle = <T>(items: T[]): T[] => {
 const { values } = parseArgs({
   options: {
     count: { type: "string", short: "n", default: "27" },
-    out: { type: "string", short: "o", default: "moderation-cases" },
+    out: { type: "string", short: "o", default: "moderation-cases-generated" },
   },
 });
 
