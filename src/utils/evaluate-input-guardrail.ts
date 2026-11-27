@@ -1,11 +1,14 @@
 // Runs a JSON file of guardrail test cases (see generate-guardrail-cases.ts)
 // through the input guardrail and logs expected versus actual for each one.
 //
-//   pnpm tsx src/utils/evaluate-input-guardrail.ts [cases-file] [--sdk a|o]
+//   pnpm tsx src/utils/evaluate-input-guardrail.ts [cases-file] [--sdk a|o] [--repeat N]
 //
 // cases-file  name of the cases JSON (default "guardrail-cases"). A bare name is
 //             read from data/; a path is used as given.
 // --sdk / -s  a = Anthropic, o = OpenAI. Leave it out to run both.
+// --repeat / -r  run every case N times (default 1) to see whether a verdict is
+//             stable. Each run is its own result, and with N above 1 the summary
+//             lists the cases whose runs disagreed as `unstable`.
 //
 // Each result is logged as one JSON line (sdk, model, prompt, expected, actual,
 // pass), then a summary is printed and the full JSON is saved in data/results/.
@@ -53,6 +56,8 @@ type EvalResult = {
   reason: string;
   pass: boolean;
   ms: number;
+  /** Which repeat this is, 1 to N */
+  run: number;
 };
 
 const { values, positionals } = parseArgs({
@@ -60,11 +65,17 @@ const { values, positionals } = parseArgs({
   options: {
     sdk: { type: "string", short: "s" },
     concurrency: { type: "string", short: "c", default: "4" },
+    repeat: { type: "string", short: "r", default: "1" },
   },
 });
 
 if (values.sdk !== undefined && values.sdk !== "a" && values.sdk !== "o") {
   console.error(`--sdk must be "a" (Anthropic) or "o" (OpenAI), got "${values.sdk}"`);
+  process.exit(1);
+}
+const repeat = Number(values.repeat);
+if (!Number.isInteger(repeat) || repeat < 1) {
+  console.error(`--repeat must be a positive whole number, got "${values.repeat}"`);
   process.exit(1);
 }
 const selected = values.sdk ? [SDKS[values.sdk]] : [SDKS.a, SDKS.o];
@@ -82,8 +93,10 @@ try {
 
 const results: EvalResult[] = [];
 for (const sdk of selected) {
-  console.log(`\n# ${sdk.name} (${sdk.model}), ${parsed.cases.length} cases`);
-  const sdkResults = await mapPool(parsed.cases, concurrency, async (c) => {
+  console.log(`\n# ${sdk.name} (${sdk.model}), ${parsed.cases.length} cases${repeat > 1 ? `, ${repeat} runs each` : ""}`);
+  // Every case once per repeat, so the pool treats each run as its own item
+  const runs = parsed.cases.flatMap((c) => Array.from({ length: repeat }, (_, i) => ({ c, run: i + 1 })));
+  const sdkResults = await mapPool(runs, concurrency, async ({ c, run }) => {
     const started = Date.now();
     let result: EvalResult;
     try {
@@ -99,6 +112,7 @@ for (const sdk of selected) {
         reason: verdict.reason,
         pass: verdict.label === c.expected,
         ms: Date.now() - started,
+        run,
       };
     } catch (err) {
       result = {
@@ -112,10 +126,11 @@ for (const sdk of selected) {
         reason: String(err),
         pass: false,
         ms: Date.now() - started,
+        run,
       };
     }
     const { sdk: s, model, prompt, expected, actual, pass } = result;
-    console.log(JSON.stringify({ sdk: s, model, prompt, expected, actual, pass }));
+    console.log(JSON.stringify({ sdk: s, model, prompt, expected, actual, pass, ...(repeat > 1 ? { run } : {}) }));
     return result;
   });
   results.push(...sdkResults);
@@ -133,7 +148,10 @@ const summarise = (rows: EvalResult[]) => ({
   errors: rows.filter((r) => r.actual === "ERROR").length,
 });
 
-const summary: Record<string, ReturnType<typeof summarise> & { byCategory: Record<string, string> }> = {};
+const summary: Record<
+  string,
+  ReturnType<typeof summarise> & { byCategory: Record<string, string>; unstable?: string[] }
+> = {};
 for (const sdk of selected) {
   const rows = results.filter((r) => r.sdk === sdk.name);
   const byCategory: Record<string, string> = {};
@@ -143,9 +161,13 @@ for (const sdk of selected) {
       byCategory[category] = `${inCategory.filter((r) => r.pass).length}/${inCategory.length}`;
     }
   }
-  summary[sdk.name] = { ...summarise(rows), byCategory };
+  // Cases whose runs did not all give the same verdict
+  const unstable = parsed.cases
+    .filter((c) => new Set(rows.filter((r) => r.id === c.id).map((r) => r.actual)).size > 1)
+    .map((c) => c.id);
+  summary[sdk.name] = { ...summarise(rows), byCategory, ...(repeat > 1 ? { unstable } : {}) };
 }
-console.log("\n# summary");
+console.log(`\n# summary${repeat > 1 ? ` (${repeat} runs per case, so counts are runs)` : ""}`);
 console.log(JSON.stringify(summary, null, 2));
 
 // --- save ------------------------------------------------------------------
@@ -155,7 +177,7 @@ const outPath = path.join(RESULTS_DIR, `${path.basename(casesPath, ".json")}-${s
 await mkdir(RESULTS_DIR, { recursive: true });
 await writeFile(
   outPath,
-  `${JSON.stringify({ casesFile: casesPath, runAt: new Date().toISOString(), summary, results }, null, 2)}\n`,
+  `${JSON.stringify({ casesFile: casesPath, repeat, runAt: new Date().toISOString(), summary, results }, null, 2)}\n`,
   "utf-8",
 );
 console.log(`\nFull results saved to ${outPath}`);

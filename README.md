@@ -74,6 +74,9 @@ pnpm guardrail:generate -- --count 30 --out my-cases
 
 # Run a cases file through the guardrail. A bare name is read from data/; -s a = Anthropic, -s o = OpenAI, no flag = both
 pnpm guardrail:eval -- my-cases -s a
+
+# Run every case 3 times; the summary lists cases whose verdict changed between runs as unstable
+pnpm guardrail:eval -- my-cases --repeat 3
 ```
 
 Each result is logged as a JSON line (`sdk`, `model`, `prompt`, `expected`, `actual`, `pass`) and the full results are saved in `data/results/` (git-ignored). `data/guardrail-cases.json` is a committed sample.
