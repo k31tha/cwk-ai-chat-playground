@@ -91,6 +91,9 @@ pnpm tsx src/utils/show-input-moderation.ts "some message"
 pnpm moderation:eval
 pnpm moderation:eval -- guardrail-cases-50 -s o
 
+# Run every case 3 times to see which verdicts are stable (an LLM guardrail can answer differently on the same input)
+pnpm moderation:eval -- --repeat 3
+
 # Generate more cases across harmless, off-topic, injection, borderline and harmful categories (default 27)
 pnpm moderation:generate -- --count 90 --out my-moderation-cases
 ```
