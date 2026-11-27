@@ -20,6 +20,24 @@ Some of the differences the examples show:
 - **Reasoning:** adaptive thinking blocks (Anthropic) versus encrypted reasoning items (OpenAI), both of which must be sent back on the next request.
 - **State:** both APIs are stateless by default, so the history is resent each turn. OpenAI also offers an optional server-side store. Anthropic's closest equivalent is Managed Agents sessions, a different abstraction that isn't covered here.
 
+## Learning path
+
+New to this? You do not need everything in the repo. Work through it in this order and stop whenever you have what you need. The numbers of lines are approximate.
+
+| Step | Read and run | You learn | Level |
+|---|---|---|---|
+| 1. Start here | `basic-chat.ts` in each folder (about 35 lines) | Sending messages, the system prompt, and why the history is resent every turn | Beginner |
+| 2. Tools | `basic-chat-with-tools.ts` in each folder (about 210 to 235 lines) | Describing a tool to the model, and the loop that runs it and sends the result back | Beginner to intermediate: the biggest jump in the core path |
+| 3. State and reasoning (optional) | `basic-chat-with-tools-conversation.ts` (OpenAI), and the two `-reasoning` variants | Server-side conversation state, and showing the model's reasoning summary | Intermediate |
+| 4. Safety checks (optional) | `src/anthropic/input-guardrail.ts` or `src/openai/input-guardrail.ts` (about 55 to 60 lines), then `src/utils/show-input-moderation.ts` | Checking a message with a cheap model before the main model sees it, and what OpenAI's Moderation API returns | Intermediate |
+| 5. Evaluating (advanced, skip on a first pass) | the generators and evaluators in `src/utils/`, and `data/` | Generating test cases, scoring a guardrail, and repeat runs | Advanced |
+
+Tips:
+
+- **Step 2:** read the file in this order: the tool definitions, then `runTool`, then the chat loop at the bottom.
+- **Step 4:** the `basic-chat-add-input-guardrail.ts` and `basic-chat-add-input-moderation.ts` files are 250 to 310 lines because each is a copy of an earlier example with a check added. To see only what changed, diff them against the file they copy, for example `diff src/anthropic/basic-chat-with-tools-reasoning.ts src/anthropic/basic-chat-add-input-guardrail.ts` (the OpenAI guardrail file copies `basic-chat-with-tools-conversation-reasoning.ts`). The moderation examples run OpenAI moderation and then the guardrail, so they need both API keys.
+- **Step 5:** the generators and evaluators in `src/utils/` (everything except `show-input-moderation.ts`) and the files in `data/` are not needed for steps 1 to 4.
+
 ## Project layout
 
 ```
@@ -27,6 +45,8 @@ src/
   anthropic/   Anthropic SDK examples (+ config.ts with the model name)
   openai/      OpenAI SDK examples (+ config.ts with the model name)
   common/      Shared system prompt, example prompts and tool helpers
+  utils/       Test-case generators and evaluators for the guardrail and moderation checks (advanced)
+data/          Test-case files for those evaluators; saved results go in data/results/ (git-ignored)
 ```
 
 ## Getting started
