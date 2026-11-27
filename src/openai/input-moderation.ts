@@ -4,8 +4,14 @@
 // (hate, harassment, self-harm, sexual, violence, illicit...). It has no idea
 // what a "travel assistant" is, so an off-topic but harmless message such as a
 // maths question passes. Compare with input-guardrail.ts, which checks topic.
+//
+// Two layers, so the raw API output can be shown (src/utils/show-input-moderation.ts):
+//   moderate(text)            the API call itself, returns OpenAI's raw response
+//   summariseModeration(raw)  boils the raw response down to what the chat uses
+//   runInputModeration(text)  both together
 import dotenv from "dotenv";
 import OpenAI from "openai";
+import type { ModerationCreateResponse } from "openai/resources/moderations";
 
 dotenv.config({ quiet: true });
 
@@ -24,10 +30,15 @@ export type ModerationResult = {
 // Created on first use so importing this file never needs an API key
 let client: OpenAI | undefined;
 
-/** Checks `text`. Throws if the call fails (callers decide what to do). */
-export const runInputModeration = async (text: string): Promise<ModerationResult> => {
+/** The Moderation API call. Throws if it fails (callers decide what to do). */
+export const moderate = async (text: string): Promise<ModerationCreateResponse> => {
   client ??= new OpenAI();
-  const response = await client.moderations.create({ model: moderationModel, input: text });
+  return client.moderations.create({ model: moderationModel, input: text });
+};
+
+/** Reduces the raw response to a block/allow decision and a reason. */
+export const summariseModeration = (response: ModerationCreateResponse): ModerationResult => {
+  // One input string in, so one result out
   const result = response.results[0];
   if (!result) throw new Error("moderation returned no result");
 
@@ -39,7 +50,11 @@ export const runInputModeration = async (text: string): Promise<ModerationResult
     reason: result.flagged
       ? `Flagged by moderation: ${categories.join(", ")}.`
       : "No moderation category was flagged.",
-    model: moderationModel,
+    model: response.model,
     categories,
   };
 };
+
+/** Checks `text`. Throws if the call fails (callers decide what to do). */
+export const runInputModeration = async (text: string): Promise<ModerationResult> =>
+  summariseModeration(await moderate(text));
