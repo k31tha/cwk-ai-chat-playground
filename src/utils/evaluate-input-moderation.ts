@@ -2,19 +2,22 @@
 // guardrail, one case at a time, and compares them on the same cases. Works with
 // the files made by generate-moderation-cases.ts and generate-guardrail-cases.ts.
 //
-//   pnpm tsx src/utils/evaluate-input-moderation.ts [cases-file] [--sdk a|o] [--moderation-only]
+//   pnpm tsx src/utils/evaluate-input-moderation.ts [cases-file] [--sdk a|o] [--moderation-only] [--repeat N]
 //
 // cases-file         name of the cases JSON (default "moderation-cases"). A bare
 //                    name is read from data/; a path is used as given.
 // --sdk / -s         which guardrail to compare with: a = Anthropic, o = OpenAI.
 //                    Leave it out to run both.
 // --moderation-only  skip the guardrails (moderation is free)
+// --repeat / -r      run every case N times (default 1) to see whether a verdict
+//                    is stable. An LLM guardrail can answer differently on the
+//                    same input; a case whose runs disagree is reported as unstable.
 //
 // Each case is scored as "should this input be blocked?" (expected OFF_TOPIC =
 // block). Checks compared: moderation alone, each guardrail alone, and
 // moderation + guardrail (blocked if either blocks, as the chat examples do).
 //
-// Output: one line per case, then a short summary per check. The rows are also
+// Output: a few lines per case, then a short summary per check. The rows are also
 // saved in data/results/. Nothing runs in parallel, so the lines appear in order.
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -50,11 +53,17 @@ const { values, positionals } = parseArgs({
   options: {
     sdk: { type: "string", short: "s" },
     "moderation-only": { type: "boolean", default: false },
+    repeat: { type: "string", short: "r", default: "1" },
   },
 });
 
 if (values.sdk !== undefined && values.sdk !== "a" && values.sdk !== "o") {
   console.error(`--sdk must be "a" (Anthropic) or "o" (OpenAI), got "${values.sdk}"`);
+  process.exit(1);
+}
+const repeat = Number(values.repeat);
+if (!Number.isInteger(repeat) || repeat < 1) {
+  console.error(`--repeat must be a positive whole number, got "${values.repeat}"`);
   process.exit(1);
 }
 const guardrails = values["moderation-only"] ? [] : values.sdk ? [GUARDRAILS[values.sdk]] : [GUARDRAILS.a, GUARDRAILS.o];
@@ -74,39 +83,57 @@ const toDecision = (blocked: boolean): Decision => (blocked ? "blocked" : "allow
 const combine = (a: Decision, b: Decision): Decision =>
   a === "blocked" || b === "blocked" ? "blocked" : a === "error" || b === "error" ? "error" : "allowed";
 
-// One flat row per case: the decision of every check, by name
+// One flat row per case. `decisions` holds, for every check, one decision per run
+// (a single item unless --repeat is used).
 type Row = {
   id: string;
   category: string;
   prompt: string;
   expected: "block" | "allow";
-  /** Categories moderation flagged, empty if none */
+  /** Categories moderation flagged on the first run, empty if none */
   flagged: string[];
-  decisions: Record<string, Decision>;
+  decisions: Record<string, Decision[]>;
 };
 
-console.log(`${parsed.cases.length} cases, one at a time: moderation${guardrails.map((g) => ` + ${g.name} guardrail`).join("")}\n`);
+const isUnstable = (runs: Decision[]) => new Set(runs).size > 1;
+/** "blocked" when every run agrees, otherwise the runs in order, marked unstable */
+const show = (runs: Decision[]) => (isUnstable(runs) ? `${runs.join("/")}(UNSTABLE)` : (runs[0] ?? "error"));
+
+console.log(
+  `${parsed.cases.length} cases, one at a time${repeat > 1 ? `, ${repeat} runs each` : ""}: ` +
+    `moderation${guardrails.map((g) => ` + ${g.name} guardrail`).join("")}\n`,
+);
 
 const rows: Row[] = [];
 for (const [i, c] of parsed.cases.entries()) {
-  const decisions: Record<string, Decision> = {};
+  const decisions: Record<string, Decision[]> = { moderation: [] };
+  for (const g of guardrails) {
+    decisions[g.name] = [];
+    decisions[`moderation+${g.name}`] = [];
+  }
   let flagged: string[] = [];
 
-  try {
-    const m = await runInputModeration(c.prompt);
-    decisions.moderation = toDecision(m.flagged);
-    flagged = m.categories;
-  } catch {
-    decisions.moderation = "error";
-  }
-
-  for (const g of guardrails) {
+  for (let run = 0; run < repeat; run++) {
+    let moderation: Decision;
     try {
-      decisions[g.name] = toDecision((await g.run(c.prompt, c.history)).label === "OFF_TOPIC");
+      const m = await runInputModeration(c.prompt);
+      moderation = toDecision(m.flagged);
+      if (run === 0) flagged = m.categories;
     } catch {
-      decisions[g.name] = "error";
+      moderation = "error";
     }
-    decisions[`moderation+${g.name}`] = combine(decisions.moderation, decisions[g.name]);
+    decisions.moderation?.push(moderation);
+
+    for (const g of guardrails) {
+      let guardrail: Decision;
+      try {
+        guardrail = toDecision((await g.run(c.prompt, c.history)).label === "OFF_TOPIC");
+      } catch {
+        guardrail = "error";
+      }
+      decisions[g.name]?.push(guardrail);
+      decisions[`moderation+${g.name}`]?.push(combine(moderation, guardrail));
+    }
   }
 
   const row: Row = {
@@ -120,33 +147,37 @@ for (const [i, c] of parsed.cases.entries()) {
   rows.push(row);
   console.log(`${String(i + 1).padStart(2)}/${parsed.cases.length} ${row.id}`);
   console.log(`   expected ${row.expected}${flagged.length ? `  (moderation flagged: ${flagged.join(", ")})` : ""}`);
-  console.log(`   ${Object.entries(decisions).map(([name, d]) => `${name}=${d}`).join("  ")}`);
+  console.log(`   ${Object.entries(decisions).map(([name, runs]) => `${name}=${show(runs)}`).join("  ")}`);
 }
 
 // --- summary: one short object per check ------------------------------------
 const checkNames = Object.keys(rows[0]?.decisions ?? {});
 const summary = Object.fromEntries(
   checkNames.map((name) => {
-    const wasRight = (r: Row) => r.decisions[name] === (r.expected === "block" ? "blocked" : "allowed");
-    return [
-      name,
-      {
-        right: `${rows.filter(wasRight).length}/${rows.length}`,
-        // a legitimate message was blocked
-        falseBlocks: rows.filter((r) => r.expected === "allow" && r.decisions[name] === "blocked").length,
-        // something that should be blocked got through
-        missedBlocks: rows.filter((r) => r.expected === "block" && r.decisions[name] === "allowed").length,
-        errors: rows.filter((r) => r.decisions[name] === "error").length,
-      },
-    ];
+    // Every run of every case counts once
+    const runs = rows.flatMap((r) => (r.decisions[name] ?? []).map((d) => ({ r, d })));
+    const total = runs.length;
+    const entry: Record<string, unknown> = {
+      right: `${runs.filter(({ r, d }) => d === (r.expected === "block" ? "blocked" : "allowed")).length}/${total}`,
+      // a legitimate message was blocked
+      falseBlocks: runs.filter(({ r, d }) => r.expected === "allow" && d === "blocked").length,
+      // something that should be blocked got through
+      missedBlocks: runs.filter(({ r, d }) => r.expected === "block" && d === "allowed").length,
+      errors: runs.filter(({ d }) => d === "error").length,
+    };
+    if (repeat > 1) {
+      // cases where the runs disagreed with each other
+      entry.unstable = rows.filter((r) => isUnstable(r.decisions[name] ?? [])).map((r) => r.id);
+    }
+    return [name, entry];
   }),
 );
-console.log("\nsummary");
+console.log(`\nsummary${repeat > 1 ? ` (${repeat} runs per case; right, falseBlocks, missedBlocks and errors count runs)` : ""}`);
 console.log(JSON.stringify(summary, null, 2));
 
 // --- save -------------------------------------------------------------------
 const stamp = new Date().toISOString().replace(/[:.]/g, "-");
 const outPath = path.join(RESULTS_DIR, `${path.basename(casesPath, ".json")}-moderation-${stamp}.json`);
 await mkdir(RESULTS_DIR, { recursive: true });
-await writeFile(outPath, `${JSON.stringify({ casesFile: casesPath, summary, rows }, null, 2)}\n`, "utf-8");
+await writeFile(outPath, `${JSON.stringify({ casesFile: casesPath, repeat, summary, rows }, null, 2)}\n`, "utf-8");
 console.log(`\nSaved to ${outPath}`);
