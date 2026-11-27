@@ -80,6 +80,10 @@ pnpm guardrail:eval -- my-cases --repeat 3
 
 # 12 hand-written cases for the programming-help rule: 6 travel-flavoured coding requests (expected OFF_TOPIC) and 6 near-miss travel questions (expected ON_TOPIC)
 pnpm guardrail:eval -- guardrail-cases-code --repeat 3
+
+# 40 generated cases for the same rule (half coding requests, half travel questions that mention technology)
+pnpm tsx src/utils/generate-code-request-cases.ts --count 40 --out my-code-cases
+pnpm guardrail:eval -- guardrail-cases-code-generated --repeat 3
 ```
 
 Each result is logged as a JSON line (`sdk`, `model`, `prompt`, `expected`, `actual`, `pass`) and the full results are saved in `data/results/` (git-ignored). `data/guardrail-cases.json` is a committed sample.
