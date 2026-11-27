@@ -23,6 +23,7 @@ import {
 import { guardrailModel as openaiModel } from "../openai/config.js";
 import { runInputGuardrail as runOpenAI } from "../openai/input-guardrail.js";
 import { RESULTS_DIR, resolveCasesPath } from "./paths.js";
+import { mapPool } from "./pool.js";
 
 const CaseFileSchema = z.object({
   cases: z.array(
@@ -78,23 +79,6 @@ try {
   console.error(`Could not load cases from ${casesPath}\n${String(err)}`);
   process.exit(1);
 }
-
-const mapPool = async <T, R>(
-  items: T[],
-  limit: number,
-  fn: (item: T) => Promise<R>,
-): Promise<R[]> => {
-  const out: R[] = new Array<R>(items.length);
-  let next = 0;
-  const worker = async () => {
-    while (next < items.length) {
-      const i = next++;
-      out[i] = await fn(items[i] as T);
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
-  return out;
-};
 
 const results: EvalResult[] = [];
 for (const sdk of selected) {
