@@ -90,21 +90,23 @@ pnpm tsx src/openai/basic-chat-add-input-moderation.ts
 
 ```bash
 # Generate N sample prompts with the label the guardrail should give (default 24, mixed categories)
-pnpm guardrail:generate -- --count 30 --out my-cases
+pnpm guardrail:generate --count 30 --out my-cases
 
 # Run a cases file through the guardrail. A bare name is read from data/; -s a = Anthropic, -s o = OpenAI, no flag = both
-pnpm guardrail:eval -- my-cases -s a
+pnpm guardrail:eval my-cases -s a
 
 # Run every case 3 times; the summary lists cases whose verdict changed between runs as unstable
-pnpm guardrail:eval -- my-cases --repeat 3
+pnpm guardrail:eval my-cases --repeat 3
 
-# 12 hand-written cases for the programming-help rule: 6 travel-flavoured coding requests (expected OFF_TOPIC) and 6 near-miss travel questions (expected ON_TOPIC)
-pnpm guardrail:eval -- guardrail-cases-code --repeat 3
+# 12 cases written by Claude for the programming-help rule: 6 travel-flavoured coding requests (expected OFF_TOPIC) and 6 near-miss travel questions (expected ON_TOPIC)
+pnpm guardrail:eval guardrail-cases-code --repeat 3
 
 # 40 generated cases for the same rule (half coding requests, half travel questions that mention technology)
 pnpm tsx src/utils/generate-code-request-cases.ts --count 40 --out my-code-cases
-pnpm guardrail:eval -- guardrail-cases-code-generated --repeat 3
+pnpm guardrail:eval guardrail-cases-code-generated --repeat 3
 ```
+
+Give options straight after the script name, as above. Do not add npm's `--` separator (`pnpm guardrail:eval -- my-cases`): pnpm passes the `--` on to the script, which then ignores the flags that follow it.
 
 Options of `pnpm guardrail:eval`:
 
@@ -129,17 +131,29 @@ pnpm tsx src/utils/show-input-moderation.ts "some message"
 # Compare moderation, each guardrail, and moderation + guardrail on 27 cases, one at a time.
 # Works with moderation and guardrail cases files; --moderation-only skips the guardrails
 pnpm moderation:eval
-pnpm moderation:eval -- guardrail-cases-50 -s o
+pnpm moderation:eval guardrail-cases-50 -s o
 
 # Run every case 3 times to see which verdicts are stable (an LLM guardrail can answer differently on the same input)
-pnpm moderation:eval -- --repeat 3
+pnpm moderation:eval --repeat 3
 
 # Judge the guardrails without the conversation history (moderation never uses it)
-pnpm moderation:eval -- guardrail-cases-50 --no-history
+pnpm moderation:eval guardrail-cases-50 --no-history
 
 # Generate more cases across harmless, off-topic, injection, borderline and harmful categories (default 27)
-pnpm moderation:generate -- --count 90 --out my-moderation-cases
+pnpm moderation:generate --count 90 --out my-moderation-cases
 ```
+
+Options of `pnpm moderation:eval`:
+
+| Option | Default | What it does |
+|---|---|---|
+| `<cases-file>` (first argument) | `moderation-cases` | Cases JSON to run (moderation or guardrail cases). A bare name is read from `data/`; a path is used as given |
+| `--sdk`, `-s` | both | Which guardrail to compare with: `a` = Anthropic, `o` = OpenAI |
+| `--moderation-only` | off | Skip the guardrails and run only moderation (free) |
+| `--repeat`, `-r` | `1` | Run every case this many times; cases whose runs disagree are listed as `unstable` |
+| `--no-history` | off | Judge the guardrails without the earlier turns of each case |
+
+Cases run one at a time, so there is no concurrency option.
 
 Each case prints three lines (the case, what was expected, each check's decision), then a short summary. `data/moderation-cases.json` (27 cases) is the committed default; `data/moderation-cases-90.json` is the larger set it was taken from. They contain short, non-graphic test inputs for a content classifier (insults, threats, self-harm statements, requests for erotica). Results are saved in `data/results/`.
 
